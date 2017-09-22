@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import uuid
+
 from django.db import models
 from django.conf import settings
 
@@ -12,11 +14,11 @@ class CoinHiveUser(TimeStampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
-    name = models.CharField(max_length=255)
-    balance = models.IntegerField()
+    name = models.UUIDField(db_index=True, default=uuid.uuid4, editable=False)
+    balance = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"{user}, {balance} hashes"
+        return f"{self.user}, {self.balance} hashes"
     
 
 class CoinHiveToken(TimeStampedModel):
@@ -31,4 +33,4 @@ class CoinHiveToken(TimeStampedModel):
     hashes = models.IntegerField()
 
     def __str__(self):
-        return f"{token}, {target}/{hashes}"
+        return f"{self.token}, {self.target}/{self.hashes}"

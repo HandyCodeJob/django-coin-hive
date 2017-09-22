@@ -10,4 +10,9 @@ urlpatterns = [
 	view=views.CoinHiveMineView.as_view(),
 	name='mine',
     ),
+    url(
+	regex=r'^user-miner?/?$',
+	view=views.CoinHiveUserView.as_view(),
+	name='user-mine',
+    ),
 ]
