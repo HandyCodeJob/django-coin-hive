@@ -1,0 +1,47 @@
+{% extends 'django_coin_hive/base.html' %}
+
+{% block content %}
+<h1>Mining coins now</h1>
+
+Hash/sec: <span id="hashesPerSecond"></span></br>
+
+Total: <span id="totalHashes"></span></br>
+
+Accepted: <span id="acceptedHashes"></span></br>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function(){ 
+	var miner = new CoinHive.User('{{SITE_KEY}}', '{{coinHiveUserName}}');
+	miner.start();
+
+	// Listen on events
+	miner.on('found', function() { /* Hash found */ })
+	miner.on('accepted', function() { /* Hash accepted by the pool */ })
+        miner.on('authed', function(params) {
+	    console.log('Token name is: ', miner.getToken());
+        });
+        miner.on('error', function(params) {
+	    if (params.error !== 'connection_error') {
+		console.log('The pool reported an error', params.error);
+	    } else {
+                console.log('Connection error', prams.error);
+            }
+        });
+
+
+	// Update stats once per second
+	setInterval(function() {
+		var hashesPerSecond = miner.getHashesPerSecond();
+		var totalHashes = miner.getTotalHashes();
+		var acceptedHashes = miner.getAcceptedHashes();
+
+		// Output to HTML elements...
+                document.getElementById("hashesPerSecond").innerHTML = hashesPerSecond;
+                document.getElementById("totalHashes").innerHTML = totalHashes;
+                document.getElementById("acceptedHashes").innerHTML = acceptedHashes;
+	}, 1000);
+    }, false);
+</script>
+
+{% endblock content %}
