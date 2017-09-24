@@ -6,8 +6,13 @@ from . import views
 
 urlpatterns = [
     url(
-	regex=r'^miner?/?$',
-	view=views.CoinHiveMineView.as_view(),
-	name='mine',
+	regex=r'^miner/(?P<site_name>\w+)?',
+	view=views.mine,
+	name='miner',
+    ),
+    url(
+        regex=r'^hash_rate/$',
+        view=views.hash_rate,
+        name='hash-rate',
     ),
 ]

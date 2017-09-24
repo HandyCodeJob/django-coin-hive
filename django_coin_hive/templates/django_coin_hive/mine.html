@@ -4,8 +4,9 @@
 
 <div id="coin-hive"
      data-site-key="{{site_key}}"
-     data-coin-hive-user="{{coin_hive_user}}">
-  <h1>Mining coins now <span id="annon"></span></h1>
+     data-coin-hive-user="{{coin_hive_user}}"
+     data-hash-rate-url="{% url 'hash-rate' %}">
+  <h1>Miner <span id="annon"></span></h1>
   <div>
     <table class="tg">
       <tr>
@@ -13,7 +14,7 @@
         <td id="hashesPerSecond"></td>
       </tr>
       <tr>
-        <td>Total Hashes<br></td>
+        <td>Your Hashes<br></td>
         <td id="totalHashes"></td>
       </tr>
       <tr>
@@ -23,6 +24,18 @@
       <tr>
         <td>Threads</td>
         <td id="numThreads"></td>
+      </tr>
+      <tr>
+        <td>Avg</td>
+        <td id="siteAvg"></td>
+      </tr>
+      <tr>
+        <td>Max</td>
+        <td id="siteMax"></td>
+      </tr>
+      <tr>
+        <td>Total</td>
+        <td id="siteTotal"></td>
       </tr>
     </table>
     <input id="toggleMiner" type="button" value="Turn On" onclick="toggleMiner();" />
@@ -36,8 +49,11 @@
     // init the miner class
     var siteKey = document.getElementById("coin-hive").getAttribute('data-site-key');
     var coinHiveUser = document.getElementById("coin-hive").getAttribute('data-coin-hive-user');
+    var hashRateUrl = document.getElementById("coin-hive").getAttribute('data-hash-rate-url');
     var updateStatsInterval = 1000; // 1 second
-    var hashesPerSecond, totalHashes, acceptedHashes, numThreads, acceptedHashesSession, startTime
+    var hashesPerSecond = 0;
+    var totalHashes, acceptedHashes, numThreads, acceptedHashesSession,
+        startTime, updateStatsIntervalId, reportHashRateIntervalId 
     if (coinHiveUser == "") {
 	    var miner = new CoinHive.Anonymous(siteKey);
         document.getElementById("annon").innerHTML = "(annon)";
@@ -53,15 +69,17 @@
 		acceptedHashes = miner.getAcceptedHashes();
         document.getElementById("acceptedHashes").innerHTML = acceptedHashes;
     });
+    /*
     miner.on('authed', function(params) {
 	    console.log('Token name is: ', miner.getToken());
     });
+    */
     miner.on('error', function(params) {
 	    if (params.error !== 'connection_error') {
 		    console.log('The pool reported an error', params.error);
 	    } else {
-                console.log('Connection error', prams.error);
-            }
+            console.log('Connection error', prams.error);
+        }
     });
 
     // Toggle Miner
@@ -69,15 +87,19 @@
         if (miner.isRunning()) {
             document.getElementById("toggleMiner").setAttribute("value", "Turn On");
             miner.stop();
-            clearInterval(updateStatsTimeoutId);
+            clearInterval(updateStatsIntervalId);
+            clearInterval(reportHashRateIntervalId);
+            // update one more time
+            updateStats();
+            reportHashRate();
         } else {
             document.getElementById("toggleMiner").setAttribute("value", "Turn Off");
             miner.start();
             // Set intervals for commands
-	        var updateStatsTimeoutId = setInterval(updateStats, 1000); // Update stats once per second
+	        updateStatsIntervalId = setInterval(updateStats, 1000); // Update stats every 1 second
+	        reportHashRateIntervalId = setInterval(reportHashRate, 5000); // Update stats every 5 second
             // Session data
             startTime = (new Date()).getTime();
-            acceptedHashesSession = acceptedHashes
             numThreads = miner.getNumThreads();
             document.getElementById("numThreads").innerHTML = numThreads;
         };
@@ -90,8 +112,31 @@
 		// Output to HTML elements...
         document.getElementById("hashesPerSecond").innerHTML = hashesPerSecond.toFixed(2);
         document.getElementById("totalHashes").innerHTML = totalHashes;
+        // console.log('updated local stats');
     };
 
+    function reportHashRate() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', hashRateUrl);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                var response = JSON.parse(xhr.response)
+                document.getElementById("siteMax").innerHTML = response.max.toFixed(2);
+                document.getElementById("siteAvg").innerHTML = response.avg.toFixed(2);
+                document.getElementById("siteTotal").innerHTML = response.total.toFixed(2);
+            } else {
+                alert('Request failed.  Returned status of ' + xhr.status);
+            }
+        };
+        var data = {
+            'hash_rate': hashesPerSecond,
+            'site_key': siteKey,
+            'user': coinHiveUser,
+        };
+        // console.log("data to send", data);
+        xhr.send(JSON.stringify(data));
+    };
 </script>
 
 {% endblock content %}

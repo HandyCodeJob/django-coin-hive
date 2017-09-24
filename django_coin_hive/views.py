@@ -1,68 +1,90 @@
 # -*- coding: utf-8 -*-
 from django.http import HttpResponseNotAllowed, HttpResponseBadRequest, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 from django.contrib.auth.models import AnonymousUser
+from django.shortcuts import render
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Max, Sum
+from django.db.models import Max, Sum, Avg
+import json
+from datetime import timedelta, datetime
 
-from .models import CoinHiveUser
+from .models import CoinHiveUser, CoinHiveSite, CoinHiveCurrentHashRate
 
 
-def get_stats(tag):
-    return CoinHiveEvent.objects.filter(tag=tag).annotate(
-        sum=F('hashes') / F('interval')
+def get_site_hash_rate(site_key):
+    SAMPLE_TIME_SIZE = 30
+    cutoff = datetime.now() - timedelta(seconds=SAMPLE_TIME_SIZE)
+    return CoinHiveCurrentHashRate.objects.filter(
+        site__site_key=site_key,
+        modified__gte=cutoff,
     ).aggregate(
-        max=Max('sum'),
-        avg=Avg('sum'),
-        total=Sum('sum'),
+        max=Max('hash_rate'),
+        avg=Avg('hash_rate'),
+        total=Sum('hash_rate'),
     )
 
 
-class CoinHiveMineView(TemplateView):
+def mine(request, site_name=None):
     template_name = "django_coin_hive/mine.html"
+    context = {}
+    if site_name:
+        try:
+            site = CoinHiveSite.objects.get(site_name=site_name)
+        except CoinHiveSite.DoesNotExist:
+            return HttpResponseBadRequest("Invalid site name provided")
+    else:
+        try:
+            site = CoinHiveSite.objects.get(default=True)
+        except CoinHiveSite.DoesNotExist:
+            raise Exception("There needs to be a default Site")
 
-    def get_context_data(self, **kwargs):
-        context = {
-            'site_key': settings.COIN_HIVE_SITE_KEY,
-        }
-        user = self.request.user
-        if not isinstance(user, AnonymousUser):
-            if user.coinhiveuser_set.count():
-                coinhive_user = user.coinhiveuser_set.first()
-            else:  # create one if one doesn't exist for the user
-                coinhive_user = CoinHiveUser.objects.create(user=user)
+    context.update({'site_key': site.site_key,})
 
-            context.update({'coin_hive_user': coinhive_user.name})
-        return context
+    user = request.user
+    if not isinstance(user, AnonymousUser):
+        if user.coinhiveuser_set.count():
+            coinhive_user = user.coinhiveuser_set.first()
+        else:  # create one if one doesn't exist for the user
+            coinhive_user = CoinHiveUser.objects.create(user=user)
+        context.update({'coin_hive_user': coinhive_user.name})
+    return render(request, template_name, context=context)
 
 
-def report(request):
-    STATS_INTERVAL
+@csrf_exempt
+def hash_rate(request):
     if request.method == 'GET':
         pass
     elif request.method == 'POST':
+        data = json.loads(request.body)
         try:
-            coin_hive_user = request.POST.get('coin_hive_user', '')
-            time_live = request.POST.get('time_live')
-            interval = request.POST.get('interval')
-            accepted_hashes = int(request.POST.get('accepted_hashes'))
-            tag = request.POST.get('tag', '')
+            user_name = data.get('user')
+            hash_rate = float(data.get('hash_rate'))
+            site_key = data.get('site_key')
         except (IndexError, ValueError,):
             return HttpResponseBadRequest()
         try:
-            user = CoinHiveUser.objects.get(name=coin_hive_user)
+            user = CoinHiveUser.objects.get(name=user_name)
         except CoinHiveUser.DoesNotExist:
-            return HttpResponseBadRequest()
-        CoinHiveEvent.objects.create(
+            return HttpResponseBadRequest("User does not exist")
+        try:
+            site = CoinHiveSite.objects.get(site_key=site_key)
+        except CoinHiveUser.DoesNotExist:
+            return HttpResponseBadRequest("Site does not exist")
+
+        CoinHiveCurrentHashRate.objects.update_or_create(
             user=user,
-            interval=interval,
-            time_live=time_live,
-            hashes=accepted_hashes,
-            tag=tag,
+            site=site,
+            defaults={'hash_rate':hash_rate,},
         )
-        return JsonResponse({'success': True})
-        # return cache.get_or_set(tag, get_stats, STATS_INTERVAL)
+
+        stats = cache.get_or_set(
+            site_key,
+            lambda : get_site_hash_rate(site_key),
+            10
+        )
+        return JsonResponse(stats)
 
     else:
         return HttpResponseNotAllowed(('GET', 'POST',))
