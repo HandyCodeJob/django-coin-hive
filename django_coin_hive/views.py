@@ -55,7 +55,14 @@ def mine(request, site_name=None):
 @csrf_exempt
 def hash_rate(request):
     if request.method == 'GET':
-        pass
+        data = json.loads(request.body)
+        site_key = data.get('site_key')
+        stats = cache.get_or_set(
+            site_key,
+            lambda : get_site_hash_rate(site_key),
+            10
+        )
+        return JsonResponse(stats)
     elif request.method == 'POST':
         data = json.loads(request.body)
         try:
