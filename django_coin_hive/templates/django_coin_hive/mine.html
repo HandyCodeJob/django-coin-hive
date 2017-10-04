@@ -30,7 +30,7 @@
       <tr>
         <td>Speed</td>
         <td id="speed">
-            <input type='number' step='10' id='speedInput' name='speed' value='' min=0 max=100 onChange='miner.setThrottle(this.value/100)'/>
+            <input type='number' step='10' id='speedInput' name='speed' value='' min=0 max=100 onChange='miner.setThrottle(1 - (this.value/100))'/>
         </td>
       <tr>
         <td>Avg</td>
@@ -87,7 +87,7 @@
     };
     numThreads = miner.getNumThreads();
     document.getElementById("numThreadsInput").setAttribute('value', numThreads);
-    speed = miner.getThrottle() * 100;
+    speed = 100 - (miner.getThrottle() * 100);
     document.getElementById("speedInput").setAttribute('value', speed);
 
 
@@ -129,11 +129,7 @@
 	        reportHashRateIntervalId = setInterval(reportHashRate, 5000); // Update stats every 5 second
             // Session data
             startTime = (new Date()).getTime();
-            speed = miner.getThrottle() * 100;
-            if ( speed == 0 ) {
-                miner.setThrottle(1);
-                speed = 100;
-            };
+            speed = 100 - (miner.getThrottle() * 100);
             document.getElementById("speedInput").setAttribute('value', speed);
         };
     };
