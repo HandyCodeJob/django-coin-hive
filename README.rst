@@ -13,6 +13,17 @@ Django Coin-Hive
 
 Intergrate Coin-Hive cryptocurrency miner with django projects
 
+NOTE: This project is being built in tandem with another project. If you try to
+use this package, you will run into problems. When this is released to pip, it
+will be stable
+
+
+Disclaimer
+----------
+
+This project is not endorsed by or affiliated with coinhive.com in any way.
+
+
 Documentation
 -------------
 
