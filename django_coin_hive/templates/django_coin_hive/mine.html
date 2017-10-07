@@ -82,6 +82,7 @@
 <script>
     "use strict"
     // init the miner class
+    // TODO: Have the scripts load the js from the proxy or coinhive, if proxy is not given
 
     var websocketShards = document.getElementById("coin-hive").getAttribute('data-websocket-proxy');
     try {
@@ -89,6 +90,8 @@
     } catch (e)  {
         console.log("Failed to use custom shard " + websocketShards);
         console.log("Reason " + e);
+        // we are using JS that has localhost in it so we need to point to coinhive
+        CoinHive.CONFIG.WEBSOCKET_SHARDS = [["wss://ws001.coinhive.com/proxy"]];
     };
 
     var siteKey = document.getElementById("coin-hive").getAttribute('data-site-key');
