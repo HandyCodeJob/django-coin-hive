@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 
 <div id="coin-hive"
      data-site-key="{{site_key}}"
      data-coin-hive-user="{{coin_hive_user}}"
+     data-websocket-proxy="{{WEBSOCKET_PROXY}}"
      data-hash-rate-url="{% url 'hash-rate' %}">
   <div id="miner">
     <h1>Miner <span id="annon"></span></h1>
@@ -50,7 +52,15 @@
   </div>
 </div>
 
+<!--
 <script src="https://coin-hive.com/lib/coinhive.min.js"></script>
+-->
+<script src="{% static 'miner/miner.min.js' %}"></script>
+<!--
+<script src="{% static 'miner/cryptonight.wasm' %}"></script>
+<script src="{% static 'miner/cryptonight-asmjs.min.js' %}"></script>
+<script src="{% static 'miner/cryptonight-asmjs.min.js.mem' %}"></script>
+-->
 
 <style>
 #coin-hive {
@@ -72,6 +82,15 @@
 <script>
     "use strict"
     // init the miner class
+
+    var websocketShards = document.getElementById("coin-hive").getAttribute('data-websocket-proxy');
+    try {
+        CoinHive.CONFIG.WEBSOCKET_SHARDS = JSON.parse(websocketShards);
+    } catch (e)  {
+        console.log("Failed to use custom shard " + websocketShards);
+        console.log("Reason " + e);
+    };
+
     var siteKey = document.getElementById("coin-hive").getAttribute('data-site-key');
     var coinHiveUser = document.getElementById("coin-hive").getAttribute('data-coin-hive-user');
     var hashRateUrl = document.getElementById("coin-hive").getAttribute('data-hash-rate-url');
@@ -79,12 +98,7 @@
     var hashesPerSecond = 0;
     var totalHashes, acceptedHashes, numThreads, acceptedHashesSession,
         startTime, updateStatsIntervalId, reportHashRateIntervalId, speed
-    if (coinHiveUser == "") {
-	    var miner = new CoinHive.Anonymous(siteKey);
-        document.getElementById("annon").innerHTML = "(annon)";
-    } else {
-	    var miner = new CoinHive.User(siteKey, coinHiveUser);
-    };
+	var miner = new CoinHive.User(siteKey, coinHiveUser);
     numThreads = miner.getNumThreads();
     document.getElementById("numThreadsInput").setAttribute('value', numThreads);
     speed = 100 - (miner.getThrottle() * 100);

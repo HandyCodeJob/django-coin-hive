@@ -28,7 +28,9 @@ def get_site_hash_rate(site_key):
 
 def mine(request, site_name=None):
     template_name = "django_coin_hive/mine.html"
-    context = {}
+
+    context = {"WEBSOCKET_PROXY": settings.WEBSOCKET_PROXY}
+
     if site_name:
         try:
             site = CoinHiveSite.objects.get(site_name=site_name)
@@ -48,7 +50,9 @@ def mine(request, site_name=None):
             coinhive_user = user.coinhiveuser_set.first()
         else:  # create one if one doesn't exist for the user
             coinhive_user = CoinHiveUser.objects.create(user=user)
-        context.update({'coin_hive_user': coinhive_user.name})
+    else:  # we need to have an id for tracking hash rates
+        coinhive_user = CoinHiveUser.objects.create()
+    context.update({'coin_hive_user': coinhive_user.name})
     return render(request, template_name, context=context)
 
 
